@@ -41,7 +41,7 @@ exports.getNearbyMasjids = async (req, res) => {
             type: 'Point',
             coordinates: [parseFloat(longitude), parseFloat(latitude)]
           },
-          $maxDistance: parseInt(maxDistance) // in meters
+          $maxDistance: parseInt(maxDistance)
         }
       }
     }).populate('addedBy', 'name email');
@@ -87,16 +87,23 @@ exports.getMasjid = async (req, res) => {
 
 // @desc    Create new masjid
 // @route   POST /api/masjids
-// @access  Private/Admin
+// @access  Private/Admin (Main Admin only can directly add)
 exports.createMasjid = async (req, res) => {
   try {
     const { name, address, latitude, longitude, prayerTimes, description, phoneNumber } = req.body;
 
-    // Validate required fields
     if (!name || !address || !latitude || !longitude || !prayerTimes) {
       return res.status(400).json({
         success: false,
         message: 'Please provide all required fields'
+      });
+    }
+
+    // Only main_admin can directly create, others need approval
+    if (req.user.role !== 'main_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only main admin can directly add masjids. Please submit a request.'
       });
     }
 
@@ -128,7 +135,7 @@ exports.createMasjid = async (req, res) => {
 
 // @desc    Update masjid
 // @route   PUT /api/masjids/:id
-// @access  Private/Admin
+// @access  Private/Main Admin only
 exports.updateMasjid = async (req, res) => {
   try {
     const { name, address, latitude, longitude, prayerTimes, description, phoneNumber } = req.body;
@@ -142,7 +149,14 @@ exports.updateMasjid = async (req, res) => {
       });
     }
 
-    // Build update object
+    // Only main_admin can directly update
+    if (req.user.role !== 'main_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only main admin can directly update masjids. Please submit a request.'
+      });
+    }
+
     const updateData = {};
     if (name) updateData.name = name;
     if (address) updateData.address = address;
@@ -178,7 +192,7 @@ exports.updateMasjid = async (req, res) => {
 
 // @desc    Delete masjid
 // @route   DELETE /api/masjids/:id
-// @access  Private/Admin
+// @access  Private/Main Admin only
 exports.deleteMasjid = async (req, res) => {
   try {
     const masjid = await Masjid.findById(req.params.id);
@@ -187,6 +201,14 @@ exports.deleteMasjid = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Masjid not found'
+      });
+    }
+
+    // Only main_admin can delete
+    if (req.user.role !== 'main_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only main admin can delete masjids'
       });
     }
 

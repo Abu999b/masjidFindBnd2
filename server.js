@@ -16,17 +16,48 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Enable CORS
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://your-frontend-domain.vercel.app',
+    /\.vercel\.app$/
+  ],
+  credentials: true
+}));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/masjids', require('./routes/masjidRoutes'));
+app.use('/api/requests', require('./routes/requestRoutes')); // MAKE SURE THIS LINE EXISTS
+
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Masjid Finder API is running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      masjids: '/api/masjids',
+      requests: '/api/requests'
+    }
+  });
+});
 
 // Health check route
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Server is running'
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
   });
 });
 
@@ -35,7 +66,8 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     success: false,
-    message: 'Server Error'
+    message: 'Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
